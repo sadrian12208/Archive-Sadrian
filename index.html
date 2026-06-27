@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archive.Sadrian — Personal Archive & Portfolio by Yeasin Sarder</title>
+    <meta name="description"
+        content="Archive.Sadrian is the personal digital archive of Yeasin Sarder (sadrian). Explore ideas, events, achievements, and tasks — all organized in one place.">
+    <meta name="keywords"
+        content="Archive Sadrian, archive sadrian, Yeasin Sarder, sadrian, personal archive, portfolio, ideas, achievements, digital diary">
+    <meta name="author" content="Yeasin Sarder">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://archive-sadrian.vercel.app/">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://archive-sadrian.vercel.app/">
+    <meta property="og:title" content="Archive.Sadrian — Personal Archive by Yeasin Sarder">
+    <meta property="og:description"
+        content="Explore ideas, events, achievements, and tasks — all organized in one beautiful digital archive.">
+    <meta property="og:site_name" content="Archive.Sadrian">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Archive.Sadrian — Personal Archive by Yeasin Sarder">
+    <meta name="twitter:description"
+        content="Explore ideas, events, achievements, and tasks — all organized in one beautiful digital archive.">
+
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Archive.Sadrian",
+        "alternateName": ["Archive Sadrian", "archive sadrian", "sadrian archive"],
+        "url": "https://archive-sadrian.vercel.app/",
+        "description": "Personal digital archive of Yeasin Sarder — ideas, events, achievements, and tasks.",
+        "author": {
+            "@type": "Person",
+            "name": "Yeasin Sarder",
+            "alternateName": "sadrian"
+        }
+    }
+    </script>
+
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+
+<body class="light-theme public-mode">
+    <div id="global-loader"
+        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-body); z-index: 9999; display: flex; align-items: center; justify-content: center;">
+        <div
+            style="width: 40px; height: 40px; border: 4px solid var(--border-color); border-top-color: var(--accent-blue); border-radius: 50%; animation: spin 1s linear infinite;">
+        </div>
+        <style>
+            @keyframes spin {
+                100% {
+                    transform: rotate(360deg);
+                }
+            }
+        </style>
+    </div>
+    <div class="app" style="opacity: 0; transition: opacity 0.3s ease;">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <div class="logo">
+                    <i class="fas fa-archive"></i>
+                    <span>Archive.Sadrian</span>
+                </div>
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="search-input" placeholder="Search your archives...">
+                </div>
+            </div>
+
+            <!-- Category Tabs (Facebook-style) -->
+            <nav class="header-middle">
+                <button class="category-tab active" data-category="all" title="Home">
+                    <i class="fas fa-home"></i>
+                    <span class="tab-label">Home</span>
+                    <span class="tab-count" id="count-all">0</span>
+                    <div class="tab-indicator"></div>
+                </button>
+                <button class="category-tab" data-category="ideas" title="Ideas">
+                    <i class="fas fa-lightbulb"></i>
+                    <span class="tab-label">Ideas</span>
+                    <span class="tab-count" id="count-ideas">0</span>
+                    <div class="tab-indicator"></div>
+                </button>
+                <button class="category-tab" data-category="events" title="Events">
+                    <i class="fas fa-calendar-day"></i>
+                    <span class="tab-label">Events</span>
+                    <span class="tab-count" id="count-events">0</span>
+                    <div class="tab-indicator"></div>
+                </button>
+                <button class="category-tab" data-category="achievements" title="Achievements">
+                    <i class="fas fa-trophy"></i>
+                    <span class="tab-label">Achievements</span>
+                    <span class="tab-count" id="count-achievements">0</span>
+                    <div class="tab-indicator"></div>
+                </button>
+                <button class="category-tab" data-category="tasks" title="Tasks">
+                    <i class="fas fa-check-circle"></i>
+                    <span class="tab-label">Tasks</span>
+                    <span class="tab-count" id="count-tasks">0</span>
+                    <div class="tab-indicator"></div>
+                </button>
+            </nav>
+
+            <div class="header-right">
+                <!-- Notification Bell -->
+                <div class="notif-wrapper" id="notif-wrapper">
+                    <button class="notif-bell-btn" id="notif-bell-btn" title="Notifications">
+                        <i class="fas fa-bell"></i>
+                        <span class="notif-badge" id="notif-badge" style="display:none">0</span>
+                    </button>
+                    <div class="notif-dropdown" id="notif-dropdown">
+                        <div class="notif-dropdown-header">
+                            <span><i class="fas fa-bell"></i> Notifications</span>
+                            <button class="notif-mark-all" id="notif-mark-all">Mark all read</button>
+                        </div>
+                        <div class="notif-list" id="notif-list">
+                            <div class="notif-empty">No new notifications</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="header-profile" id="header-profile-btn" title="Profile Settings">
+                    <img src="" alt="Profile" class="header-avatar" id="header-avatar-img">
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Container -->
+        <div class="main-container">
+            <!-- Left Sidebar -->
+            <aside class="left-sidebar">
+                <div class="profile-card">
+                    <div class="profile-banner" id="profile-banner"></div>
+                    <div class="profile-info">
+                        <img src="" alt="Sadrian" class="profile-avatar" id="profile-avatar-img">
+                        <h3 id="profile-name">Sadrian</h3>
+                        <p class="profile-title" id="profile-title">Archivist & Creator</p>
+                        <p class="profile-bio" id="profile-bio">Documenting ideas, events, achievements and daily tasks.
+                        </p>
+                        <button class="edit-profile-btn" id="edit-profile-btn">
+                            <i class="fas fa-pen"></i> Edit Profile
+                        </button>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Center Feed -->
+            <main class="feed">
+                <div id="feed-view-section" class="view-section active">
+                    <!-- Create Post -->
+                    <div class="create-post-card">
+                        <div class="create-post-top">
+                            <img src="" alt="Sadrian" class="small-avatar" id="create-post-avatar">
+                            <div class="create-post-input-area">
+                                <textarea id="post-text"
+                                    placeholder="Share your idea, event, achievement or task..."></textarea>
+                            </div>
+                        </div>
+
+                        <div class="post-media-preview" id="media-preview"></div>
+
+                        <div class="create-post-actions">
+                            <div class="post-type-select">
+                                <label class="type-btn active" data-type="ideas">
+                                    <i class="fas fa-lightbulb"></i>
+                                    <span>Idea</span>
+                                    <input type="radio" name="post-type" value="ideas" checked>
+                                </label>
+                                <label class="type-btn" data-type="events">
+                                    <i class="fas fa-calendar-day"></i>
+                                    <span>Event</span>
+                                    <input type="radio" name="post-type" value="events">
+                                </label>
+                                <label class="type-btn" data-type="achievements">
+                                    <i class="fas fa-trophy"></i>
+                                    <span>Achievement</span>
+                                    <input type="radio" name="post-type" value="achievements">
+                                </label>
+                                <label class="type-btn" data-type="tasks">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span>Task</span>
+                                    <input type="radio" name="post-type" value="tasks">
+                                </label>
+                            </div>
+
+                            <div class="post-attachments">
+                                <label class="attach-btn">
+                                    <i class="fas fa-image"></i>
+                                    <span>Photo</span>
+                                    <input type="file" id="post-image" accept="image/*" hidden>
+                                </label>
+                                <label class="attach-btn">
+                                    <i class="fas fa-video"></i>
+                                    <span>Video</span>
+                                    <input type="file" id="post-video" accept="video/*" hidden>
+                                </label>
+                                <label class="attach-btn">
+                                    <i class="fas fa-link"></i>
+                                    <span>Link</span>
+                                </label>
+                            </div>
+
+                            <button class="post-submit-btn" id="post-btn">
+                                <i class="fas fa-paper-plane"></i> Post
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Feed Filter Bar -->
+                    <div class="feed-filter-bar">
+                        <span class="feed-filter-label">Sort by:</span>
+                        <select id="sort-select">
+                            <option value="newest">Newest First</option>
+                            <option value="oldest">Oldest First</option>
+                        </select>
+                        <span class="feed-count" id="feed-count">0 archives</span>
+                    </div>
+
+                    <!-- Feed Container -->
+                    <div id="feed-container">
+                        <div class="empty-state" id="empty-state">
+                            <i class="fas fa-box-open"></i>
+                            <h3>No archives yet</h3>
+                            <p>Start by creating your first archive post above!</p>
+                        </div>
+                    </div> <!-- End feed-container -->
+                </div> <!-- End feed-view-section -->
+
+                <!-- Profile Detailed View Section -->
+                <div id="profile-view-section" class="view-section" style="display: none;">
+                    <!-- Cover and Basic Info -->
+                    <div class="profile-detail-header-card">
+                        <div class="profile-detail-banner" id="pd-banner"></div>
+                        <div class="profile-detail-info">
+                            <img src="" alt="Profile" class="profile-detail-avatar" id="pd-avatar">
+                            <div class="pd-text-container">
+                                <h2 id="pd-name">Name</h2>
+                                <p class="pd-title" id="pd-title">Title</p>
+                            </div>
+                            <button class="pd-edit-btn" onclick="openProfileModal()" title="Edit Profile">
+                                <i class="fas fa-pen"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- About / Bio -->
+                    <div class="profile-detail-card">
+                        <div class="pd-card-header">
+                            <h3>About</h3>
+                            <button class="pd-edit-btn" onclick="openProfileModal()" title="Edit"><i
+                                    class="fas fa-pen"></i></button>
+                        </div>
+                        <p id="pd-bio">Bio goes here</p>
+                    </div>
+
+                    <!-- Skills -->
+                    <div class="profile-detail-card">
+                        <div class="pd-card-header">
+                            <h3>Skills</h3>
+                            <button class="pd-edit-btn" onclick="openProfileModal()" title="Edit"><i
+                                    class="fas fa-pen"></i></button>
+                        </div>
+                        <div class="pd-skills-list" id="pd-skills">
+                            <!-- Skill tags will be injected here -->
+                        </div>
+                    </div>
+
+                    <!-- Education -->
+                    <div class="profile-detail-card">
+                        <div class="pd-card-header">
+                            <h3>Education</h3>
+                            <button class="pd-edit-btn" onclick="openProfileModal()" title="Edit"><i
+                                    class="fas fa-pen"></i></button>
+                        </div>
+                        <p id="pd-education" style="white-space: pre-line;">Education info goes here</p>
+                    </div>
+
+                    <!-- Interests -->
+                    <div class="profile-detail-card">
+                        <div class="pd-card-header">
+                            <h3>Interests</h3>
+                            <button class="pd-edit-btn" onclick="openProfileModal()" title="Edit"><i
+                                    class="fas fa-pen"></i></button>
+                        </div>
+                        <div class="pd-skills-list" id="pd-interests">
+                            <!-- Interest tags will be injected here -->
+                        </div>
+                    </div>
+
+                    <!-- Contact Info -->
+                    <div class="profile-detail-card pd-contact-card">
+                        <div class="pd-card-header">
+                            <h3>Contact Info</h3>
+                            <button class="pd-add-btn" id="pd-add-contact-btn" title="Add Link">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                        <div class="contact-links" id="pd-contact-links">
+                            <!-- Links injected here -->
+                        </div>
+                    </div>
+
+                    <div class="admin-login-wrapper" style="text-align: center; padding: 10px; margin-top: 20px;">
+                        <button id="admin-login-btn"
+                            style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px; padding: 8px;"><i
+                                class="fas fa-lock"></i> Admin Login</button>
+                        <button id="admin-logout-btn"
+                            style="display: none; background: none; border: none; color: var(--accent-orange); cursor: pointer; font-size: 12px; padding: 8px;"><i
+                                class="fas fa-sign-out-alt"></i> Logout</button>
+                    </div>
+
+
+                </div>
+            </main>
+
+            <!-- Right Sidebar -->
+            <aside class="right-sidebar">
+                <div class="backup-card">
+                    <h4><i class="fas fa-database"></i> Data Backup</h4>
+                    <p class="backup-desc">Export or import your archive data as JSON.</p>
+                    <div class="backup-actions">
+                        <button class="backup-btn export" id="export-btn">
+                            <i class="fas fa-download"></i> Export JSON
+                        </button>
+                        <label class="backup-btn import">
+                            <i class="fas fa-upload"></i> Import JSON
+                            <input type="file" id="import-file" accept=".json" hidden>
+                        </label>
+                    </div>
+                </div>
+
+
+            </aside>
+        </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div class="modal" id="image-modal">
+        <div class="modal-content">
+            <button class="modal-close" id="modal-close"><i class="fas fa-times"></i></button>
+            <img src="" alt="Full size" id="modal-image">
+        </div>
+    </div>
+
+    <!-- Profile Settings Modal -->
+    <div class="modal profile-modal" id="profile-modal">
+        <div class="profile-modal-content">
+            <div class="profile-modal-header">
+                <h3><i class="fas fa-user-cog"></i> Profile Settings</h3>
+                <button class="modal-close" id="profile-modal-close"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div class="profile-modal-body">
+                <!-- Cover Banner Preview -->
+                <div class="pm-banner-section">
+                    <div class="pm-banner-preview" id="pm-banner-preview">
+                        <div class="pm-banner-overlay">
+                            <label class="pm-upload-btn" for="pm-banner-input">
+                                <i class="fas fa-camera"></i> Change Cover
+                            </label>
+                            <input type="file" id="pm-banner-input" accept="image/*" hidden>
+                        </div>
+                    </div>
+                    <!-- Avatar Preview -->
+                    <div class="pm-avatar-wrapper">
+                        <img src="" alt="Avatar" class="pm-avatar-preview" id="pm-avatar-preview">
+                        <label class="pm-avatar-upload-btn" for="pm-avatar-input">
+                            <i class="fas fa-camera"></i>
+                        </label>
+                        <input type="file" id="pm-avatar-input" accept="image/*" hidden>
+                    </div>
+                </div>
+
+                <!-- Form Fields -->
+                <div class="pm-form">
+                    <h4 class="pm-section-title">Basic Info</h4>
+                    <div class="pm-field">
+                        <label for="pm-name">Display Name</label>
+                        <input type="text" id="pm-name" placeholder="Your name" maxlength="30">
+                    </div>
+                    <div class="pm-field">
+                        <label for="pm-title-input">Title</label>
+                        <input type="text" id="pm-title-input" placeholder="e.g. Archivist & Creator" maxlength="50">
+                    </div>
+                    <div class="pm-field">
+                        <label for="pm-bio">Bio</label>
+                        <textarea id="pm-bio" placeholder="Write something about yourself..." maxlength="200"
+                            rows="3"></textarea>
+                        <span class="pm-char-count" id="pm-bio-char-count">0/200</span>
+                    </div>
+
+                    <h4 class="pm-section-title">Professional</h4>
+                    <div class="pm-field">
+                        <label for="pm-skills">Skills (comma separated)</label>
+                        <input type="text" id="pm-skills" placeholder="e.g. JavaScript, Design, Management">
+                    </div>
+                    <div class="pm-field">
+                        <label for="pm-education">Education</label>
+                        <textarea id="pm-education" placeholder="E.g. BSc Computer Science, University of XYZ"
+                            rows="2"></textarea>
+                    </div>
+                    <div class="pm-field">
+                        <label for="pm-interests">Interests (comma separated)</label>
+                        <input type="text" id="pm-interests" placeholder="e.g. AI, Space, Writing">
+                    </div>
+
+                    <h4 class="pm-section-title">Contact Links</h4>
+                    <div id="pm-contact-list">
+                        <!-- Dynamic contact rows will be injected here -->
+                    </div>
+                    <button type="button" class="pm-add-link-btn" id="pm-add-link-btn">
+                        <i class="fas fa-plus"></i> Add Link
+                    </button>
+                </div>
+            </div>
+
+            <div class="profile-modal-footer">
+                <button class="pm-cancel-btn" id="pm-cancel-btn">Cancel</button>
+                <button class="pm-save-btn" id="pm-save-btn"><i class="fas fa-check"></i> Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Login Modal -->
+    <div class="modal profile-modal" id="login-modal">
+        <div class="profile-modal-content" style="max-width: 400px;">
+            <div class="profile-modal-header">
+                <h3><i class="fas fa-lock"></i> Admin Login</h3>
+                <button class="modal-close" id="login-modal-close"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="profile-modal-body pm-form">
+                <div class="pm-field">
+                    <label for="login-email">Email</label>
+                    <input type="email" id="login-email" placeholder="Admin Email">
+                </div>
+                <div class="pm-field">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" placeholder="Admin Password">
+                </div>
+            </div>
+            <div class="profile-modal-footer">
+                <button class="pm-cancel-btn" id="login-cancel-btn">Cancel</button>
+                <button class="pm-save-btn" id="login-submit-btn"><i class="fas fa-sign-in-alt"></i> Login</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Post Modal -->
+    <div class="modal profile-modal" id="edit-post-modal">
+        <div class="profile-modal-content" style="max-width: 500px;">
+            <div class="profile-modal-header">
+                <h3><i class="fas fa-pen"></i> Edit Post</h3>
+                <button class="modal-close" id="edit-post-modal-close"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="profile-modal-body pm-form">
+                <div class="pm-field">
+                    <label for="edit-post-text">Post Content</label>
+                    <textarea id="edit-post-text" placeholder="Update your post..." rows="5"
+                        style="width: 100%; border-radius: 8px; background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 12px; font-family: inherit; resize: vertical; margin-top: 8px;"></textarea>
+                </div>
+            </div>
+            <div class="profile-modal-footer">
+                <button class="pm-cancel-btn" id="edit-post-cancel-btn">Cancel</button>
+                <button class="pm-save-btn" id="edit-post-save-btn"><i class="fas fa-check"></i> Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase App (the core Firebase SDK) is always required and must be listed first -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <!-- Add Firebase products that you want to use -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

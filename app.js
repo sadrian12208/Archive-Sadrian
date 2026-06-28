@@ -875,7 +875,8 @@ function sharePost(id, btnElement) {
     try {
         const shareTitle = btnElement ? btnElement.dataset.title : 'Archive Sadrian';
         const shareText = btnElement ? btnElement.dataset.text : 'Check out this archive!';
-        const shareUrl = window.location.origin + window.location.pathname + '?post=' + id;
+        // Use the API route for Facebook/Twitter scraping support
+        const shareUrl = `${window.location.origin}/api/share?id=${id}&title=${encodeURIComponent(shareTitle)}&text=${encodeURIComponent(shareText)}`;
 
         if (navigator.share) {
             navigator.share({
@@ -884,30 +885,46 @@ function sharePost(id, btnElement) {
                 url: shareUrl
             }).catch((err) => {
                 if (err.name !== 'AbortError') {
-                    copyToClipboard(shareTitle, shareText, shareUrl);
+                    console.error('Share failed:', err);
+                    copyToClipboard(shareUrl); // fallback
                 }
             });
         } else {
-            copyToClipboard(shareTitle, shareText, shareUrl);
+            copyToClipboard(shareUrl);
         }
     } catch (err) {
         console.error('Error sharing:', err);
+        copyToClipboard(window.location.origin + window.location.pathname + '?post=' + id);
     }
 }
 
-function copyToClipboard(title, text, url) {
-    const fallbackText = `${title}\n\n${text}\n\nLink: ${url}`;
-    navigator.clipboard.writeText(fallbackText).then(() => {
-        showToast('Link copied to clipboard!');
-    }).catch(() => {
+function copyToClipboard(url) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(() => {
+            showToast('Link copied to clipboard!');
+        }).catch(() => {
+            execCopy(url);
+        });
+    } else {
+        execCopy(url);
+    }
+}
+
+function execCopy(text) {
+    try {
         const input = document.createElement('textarea');
-        input.value = fallbackText;
+        input.value = text;
+        input.style.position = 'fixed';
+        input.style.opacity = '0';
         document.body.appendChild(input);
         input.select();
         document.execCommand('copy');
         document.body.removeChild(input);
         showToast('Link copied to clipboard!');
-    });
+    } catch (e) {
+        console.error('Exec copy failed', e);
+        showToast('Failed to copy link.');
+    }
 }
 
 function showToast(message) {

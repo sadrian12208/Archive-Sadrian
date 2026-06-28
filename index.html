@@ -109,6 +109,12 @@
                     <span class="tab-count" id="count-tasks">0</span>
                     <div class="tab-indicator"></div>
                 </button>
+                <button class="category-tab" data-category="notes" title="Notes">
+                    <i class="fas fa-sticky-note"></i>
+                    <span class="tab-label">Notes</span>
+                    <span class="tab-count" id="count-notes">0</span>
+                    <div class="tab-indicator"></div>
+                </button>
             </nav>
 
             <div class="header-right">
@@ -162,7 +168,7 @@
                             <img src="" alt="Sadrian" class="small-avatar" id="create-post-avatar">
                             <div class="create-post-input-area">
                                 <textarea id="post-text"
-                                    placeholder="Share your idea, event, achievement or task..."></textarea>
+                                    placeholder="Share your idea, event, achievement, task or note..."></textarea>
                             </div>
                         </div>
 
@@ -190,18 +196,23 @@
                                     <span>Task</span>
                                     <input type="radio" name="post-type" value="tasks">
                                 </label>
+                                <label class="type-btn" data-type="notes">
+                                    <i class="fas fa-sticky-note"></i>
+                                    <span>Note</span>
+                                    <input type="radio" name="post-type" value="notes">
+                                </label>
                             </div>
 
                             <div class="post-attachments">
                                 <label class="attach-btn">
                                     <i class="fas fa-image"></i>
                                     <span>Photo</span>
-                                    <input type="file" id="post-image" accept="image/*" hidden>
+                                    <input type="file" id="post-image" accept="image/*" multiple hidden>
                                 </label>
                                 <label class="attach-btn">
                                     <i class="fas fa-video"></i>
                                     <span>Video</span>
-                                    <input type="file" id="post-video" accept="video/*" hidden>
+                                    <input type="file" id="post-video" accept="video/*" multiple hidden>
                                 </label>
                                 <label class="attach-btn">
                                     <i class="fas fa-link"></i>

@@ -138,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============ DATABASE ============
 let currentFilter = 'all';
 let currentSort = 'newest';
-let tempMedia = { image: null, video: null };
+let tempMedia = [];
 
 // Default profile
 const defaultProfile = {
@@ -381,60 +381,79 @@ function resizeImage(dataURL, maxWidth = 1200) {
 }
 
 postImage.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-    const dataURL = await readFileAsDataURL(file);
-    const resized = await resizeImage(dataURL);
-    tempMedia.image = resized;
-    tempMedia.video = null;
+    for (const file of files) {
+        const dataURL = await readFileAsDataURL(file);
+        const resized = await resizeImage(dataURL);
+        tempMedia.push({ type: 'image', data: resized });
+    }
     renderMediaPreview();
     postImage.value = '';
 });
 
 postVideo.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-    // Show warning for large files
-    if (file.size > 50 * 1024 * 1024) {
-        alert('Video file is very large (>50MB). It may slow down the app. Consider using a smaller video or compressing it.');
+    for (const file of files) {
+        if (file.size > 50 * 1024 * 1024) {
+            alert('Video file is very large (>50MB). It may slow down the app. Consider using a smaller video or compressing it.');
+        }
+        const dataURL = await readFileAsDataURL(file);
+        tempMedia.push({ type: 'video', data: dataURL });
     }
-
-    const dataURL = await readFileAsDataURL(file);
-    tempMedia.video = dataURL;
-    tempMedia.image = null;
     renderMediaPreview();
     postVideo.value = '';
+});
+
+// Image pasting from clipboard in textarea
+postText.addEventListener('paste', async (e) => {
+    const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+    let hasImage = false;
+    for (const item of items) {
+        if (item.type.indexOf('image') === 0) {
+            const file = item.getAsFile();
+            const dataURL = await readFileAsDataURL(file);
+            const resized = await resizeImage(dataURL);
+            tempMedia.push({ type: 'image', data: resized });
+            hasImage = true;
+        }
+    }
+    if (hasImage) {
+        renderMediaPreview();
+    }
 });
 
 function renderMediaPreview() {
     mediaPreview.innerHTML = '';
 
-    if (tempMedia.image) {
+    tempMedia.forEach((media, index) => {
         const div = document.createElement('div');
         div.className = 'preview-item';
-        div.innerHTML = `
-            <img src="${tempMedia.image}" alt="Preview">
-            <button class="preview-remove" onclick="removeMedia()">✕</button>
-        `;
+        if (media.type === 'image') {
+            div.innerHTML = `
+                <img src="${media.data}" alt="Preview">
+                <button class="preview-remove" onclick="removeMediaItem(${index})">✕</button>
+            `;
+        } else if (media.type === 'video') {
+            div.innerHTML = `
+                <video src="${media.data}" controls></video>
+                <button class="preview-remove" onclick="removeMediaItem(${index})">✕</button>
+            `;
+        }
         mediaPreview.appendChild(div);
-    }
-
-    if (tempMedia.video) {
-        const div = document.createElement('div');
-        div.className = 'preview-item';
-        div.innerHTML = `
-            <video src="${tempMedia.video}" controls></video>
-            <button class="preview-remove" onclick="removeMedia()">✕</button>
-        `;
-        mediaPreview.appendChild(div);
-    }
+    });
 }
 
 function removeMedia() {
-    tempMedia.image = null;
-    tempMedia.video = null;
+    tempMedia = [];
+    renderMediaPreview();
+}
+
+function removeMediaItem(index) {
+    tempMedia.splice(index, 1);
     renderMediaPreview();
 }
 
@@ -445,7 +464,7 @@ postBtn.addEventListener('click', async () => {
     const selectedType = document.querySelector('input[name="post-type"]:checked').value;
     const profile = getProfile();
 
-    if (!text && !tempMedia.image && !tempMedia.video) {
+    if (!text && tempMedia.length === 0) {
         alert('Please write something or attach a media file.');
         return;
     }
@@ -453,8 +472,9 @@ postBtn.addEventListener('click', async () => {
     const post = {
         text: text,
         category: selectedType,
-        image: tempMedia.image,
-        video: tempMedia.video,
+        media: tempMedia,
+        image: tempMedia.length > 0 && tempMedia[0].type === 'image' ? tempMedia[0].data : null,
+        video: tempMedia.length > 0 && tempMedia[0].type === 'video' ? tempMedia[0].data : null,
         timestamp: Date.now(),
         likes: 0,
         liked: false,
@@ -462,6 +482,21 @@ postBtn.addEventListener('click', async () => {
         author: profile.name,
         avatar: profile.avatar
     };
+
+    // Notion-style todo tasks initialization
+    if (selectedType === 'tasks') {
+        post.todoList = text.split('\n')
+            .map(line => line.trim())
+            .filter(line => line.length > 0)
+            .map(line => {
+                let cleanLine = line.replace(/^-\s*\[\s*\]\s*/, '').replace(/^-\s*/, '');
+                return {
+                    text: cleanLine,
+                    completed: false,
+                    completedDate: null
+                };
+            });
+    }
 
     try {
         await addPost(post);
@@ -539,7 +574,8 @@ function createPostCard(post) {
         ideas: 'fa-lightbulb',
         events: 'fa-calendar-day',
         achievements: 'fa-trophy',
-        tasks: 'fa-check-circle'
+        tasks: 'fa-check-circle',
+        notes: 'fa-sticky-note'
     };
     const catName = post.category.charAt(0).toUpperCase() + post.category.slice(1);
 
@@ -547,17 +583,63 @@ function createPostCard(post) {
     const displayAvatar = post.avatar || profile.avatar;
     const displayName = post.author || profile.name;
 
+    // Handle Media - Multiple Media Carousel or Single Media
     let mediaHTML = '';
-    if (post.image) {
+    let postMedia = [];
+    if (post.media && Array.isArray(post.media)) {
+        postMedia = post.media;
+    } else {
+        if (post.image) postMedia.push({ type: 'image', data: post.image });
+        if (post.video) postMedia.push({ type: 'video', data: post.video });
+    }
+
+    if (postMedia.length === 1) {
+        const item = postMedia[0];
+        if (item.type === 'image') {
+            mediaHTML = `
+                <div class="archive-media">
+                    <img src="${item.data}" alt="Archive image" onclick="openImageModal(this.src)">
+                </div>
+            `;
+        } else if (item.type === 'video') {
+            mediaHTML = `
+                <div class="archive-media">
+                    <video src="${item.data}" controls poster=""></video>
+                </div>
+            `;
+        }
+    } else if (postMedia.length > 1) {
+        // Render Instagram-style Carousel
+        let slidesHTML = '';
+        let indicatorsHTML = '';
+        postMedia.forEach((item, index) => {
+            const activeClass = index === 0 ? 'active' : '';
+            indicatorsHTML += `<div class="indicator-dot ${activeClass}" data-slide-to="${index}"></div>`;
+            if (item.type === 'image') {
+                slidesHTML += `
+                    <div class="carousel-slide">
+                        <img src="${item.data}" alt="Archive image ${index+1}" onclick="openImageModal(this.src)">
+                    </div>
+                `;
+            } else if (item.type === 'video') {
+                slidesHTML += `
+                    <div class="carousel-slide">
+                        <video src="${item.data}" controls></video>
+                    </div>
+                `;
+            }
+        });
+
         mediaHTML = `
-            <div class="archive-media">
-                <img src="${post.image}" alt="Archive image" onclick="openImageModal(this.src)">
-            </div>
-        `;
-    } else if (post.video) {
-        mediaHTML = `
-            <div class="archive-media">
-                <video src="${post.video}" controls poster=""></video>
+            <div class="carousel-container" data-active-index="0">
+                <div class="carousel-slides">
+                    ${slidesHTML}
+                </div>
+                <button class="carousel-btn carousel-prev" style="opacity: 0;">❮</button>
+                <button class="carousel-btn carousel-next">❯</button>
+                <div class="carousel-indicators">
+                    ${indicatorsHTML}
+                </div>
             </div>
         `;
     }
@@ -634,6 +716,35 @@ function createPostCard(post) {
         </div>
     `;
 
+    // Render Notion Checklist if category is tasks
+    let contentAreaHTML = '';
+    if (post.category === 'tasks' && post.todoList && post.todoList.length > 0) {
+        let itemsHTML = '';
+        post.todoList.forEach((item, index) => {
+            const checkedAttr = item.completed ? 'checked' : '';
+            const completedClass = item.completed ? 'completed' : '';
+            let dateHTML = '';
+            if (item.completed && item.completedDate) {
+                const compDate = new Date(item.completedDate);
+                const dateStr = compDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                dateHTML = `<span class="todo-completed-date"><i class="fas fa-check"></i> ${dateStr}</span>`;
+            }
+            itemsHTML += `
+                <label class="notion-todo-item ${completedClass}">
+                    <input type="checkbox" class="notion-todo-checkbox" data-post-id="${post.id}" data-item-index="${index}" ${checkedAttr}>
+                    <span class="notion-todo-text">${escapeHtml(item.text)}</span>
+                    ${dateHTML}
+                </label>
+            `;
+        });
+        contentAreaHTML = `<div class="notion-todo-list">${itemsHTML}</div>`;
+    } else {
+        contentAreaHTML = formatPostText(post.text);
+    }
+
+    const shareTitle = `Archive by ${displayName}`;
+    const shareText = post.text ? (post.text.length > 100 ? post.text.substring(0, 100) + '...' : post.text) : 'Check out this archive!';
+
     card.innerHTML = `
         <div class="archive-header">
             <img src="${displayAvatar}" alt="${displayName}" class="archive-avatar" onclick="showProfileView()" title="View Profile" style="cursor: pointer;">
@@ -661,14 +772,14 @@ function createPostCard(post) {
                 </div>
             </div>
         </div>
-        ${formatPostText(post.text)}
+        ${contentAreaHTML}
         ${mediaHTML}
         <div class="archive-actions">
             <button class="action-btn" onclick="toggleCommentBox('${post.id}')">
                 <i class="far fa-comment"></i>
                 <span>${post.comments ? post.comments.length : 0}</span>
             </button>
-            <button class="action-btn" onclick="sharePost('${post.id}')">
+            <button class="action-btn" onclick="sharePost('${post.id}', this)" data-title="${escapeHtml(shareTitle)}" data-text="${escapeHtml(shareText)}">
                 <i class="fas fa-share"></i>
                 <span>Share</span>
             </button>
@@ -750,31 +861,57 @@ async function deletePostById(id) {
     }
 }
 
-async function sharePost(id) {
+async function sharePost(id, btnElement) {
     try {
-        const posts = await getAllPosts();
-        const post = posts.find(p => String(p.id) === String(id));
-        if (!post) return;
-
-        const shareTitle = `Archive by ${post.author}`;
-        const shareText = post.text ? (post.text.length > 100 ? post.text.substring(0, 100) + '...' : post.text) : 'Check out this archive!';
-
-        const shareUrl = window.location.href.split('?')[0] + '?post=' + id;
+        const shareTitle = btnElement ? btnElement.dataset.title : 'Archive Sadrian';
+        const shareText = btnElement ? btnElement.dataset.text : 'Check out this archive!';
+        const shareUrl = window.location.origin + window.location.pathname + '?post=' + id;
 
         if (navigator.share) {
-            await navigator.share({
-                title: shareTitle,
-                text: shareText,
-                url: shareUrl
-            });
+            try {
+                await navigator.share({
+                    title: shareTitle,
+                    text: shareText,
+                    url: shareUrl
+                });
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    copyToClipboard(shareTitle, shareText, shareUrl);
+                }
+            }
         } else {
-            const fallbackText = `${shareTitle}\n\n${shareText}\n\nLink: ${shareUrl}`;
-            await navigator.clipboard.writeText(fallbackText);
-            alert('Post link and text copied to clipboard!');
+            copyToClipboard(shareTitle, shareText, shareUrl);
         }
     } catch (err) {
         console.error('Error sharing:', err);
     }
+}
+
+function copyToClipboard(title, text, url) {
+    const fallbackText = `${title}\n\n${text}\n\nLink: ${url}`;
+    navigator.clipboard.writeText(fallbackText).then(() => {
+        showToast('Link copied to clipboard!');
+    }).catch(() => {
+        const input = document.createElement('textarea');
+        input.value = fallbackText;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        showToast('Link copied to clipboard!');
+    });
+}
+
+function showToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 10);
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 2500);
 }
 
 function toggleCommentBox(id) {
@@ -966,7 +1103,7 @@ async function updateStats() {
         const events = posts.filter(p => p.category === 'events').length;
         const achievements = posts.filter(p => p.category === 'achievements').length;
         const tasks = posts.filter(p => p.category === 'tasks').length;
-
+        const notes = posts.filter(p => p.category === 'notes').length;
 
         // Update header tab counts
         document.getElementById('count-all').textContent = total;
@@ -974,6 +1111,8 @@ async function updateStats() {
         document.getElementById('count-events').textContent = events;
         document.getElementById('count-achievements').textContent = achievements;
         document.getElementById('count-tasks').textContent = tasks;
+        const notesEl = document.getElementById('count-notes');
+        if (notesEl) notesEl.textContent = notes;
     } catch (err) {
         console.error('Error updating stats:', err);
     }
@@ -987,6 +1126,8 @@ async function updateCategoryCounts() {
         document.getElementById('count-events').textContent = posts.filter(p => p.category === 'events').length;
         document.getElementById('count-achievements').textContent = posts.filter(p => p.category === 'achievements').length;
         document.getElementById('count-tasks').textContent = posts.filter(p => p.category === 'tasks').length;
+        const notesEl = document.getElementById('count-notes');
+        if (notesEl) notesEl.textContent = posts.filter(p => p.category === 'notes').length;
     } catch (err) {
         console.error('Error updating category counts:', err);
     }
@@ -1446,8 +1587,14 @@ async function editPost(id) {
         const post = posts.find(p => String(p.id) === String(id));
         if (!post) return;
 
-        currentEditingPostId = post.id; // Preserve original type (number or string)
-        editPostText.value = post.text || '';
+        currentEditingPostId = post.id;
+        
+        if (post.category === 'tasks' && post.todoList && post.todoList.length > 0) {
+            editPostText.value = post.todoList.map(item => item.text).join('\n');
+        } else {
+            editPostText.value = post.text || '';
+        }
+        
         editPostModal.classList.add('active');
     } catch (err) {
         console.error('Error fetching post for edit:', err);
@@ -1476,7 +1623,23 @@ if (editPostSaveBtn) {
             const posts = await getAllPosts();
             const post = posts.find(p => String(p.id) === String(currentEditingPostId));
             if (post) {
-                post.text = editPostText.value;
+                const newText = editPostText.value.trim();
+                post.text = newText;
+                
+                if (post.category === 'tasks') {
+                    const newLines = newText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+                    post.todoList = newLines.map(line => {
+                        let cleanLine = line.replace(/^-\s*\[\s*\]\s*/, '').replace(/^-\s*/, '');
+                        // Preserve completion state if text is unchanged
+                        const existing = post.todoList ? post.todoList.find(item => item.text === cleanLine) : null;
+                        return {
+                            text: cleanLine,
+                            completed: existing ? existing.completed : false,
+                            completedDate: existing ? existing.completedDate : null
+                        };
+                    });
+                }
+                
                 await updatePost(post);
                 await renderFeed();
             }
@@ -1714,4 +1877,131 @@ document.addEventListener('DOMContentLoaded', () => {
     // Poll for new notifications every 30 seconds (admin only)
     setTimeout(() => { if (isAdmin) checkNotifications(); }, 3000);
     setInterval(() => { if (isAdmin) checkNotifications(); }, 30000);
+});
+
+// ============ GLOBAL INTERACTIVE HANDLERS ============
+
+// 1. Carousel navigation logic
+function navigateCarousel(container, direction) {
+    const slides = container.querySelectorAll('.carousel-slide');
+    const dots = container.querySelectorAll('.indicator-dot');
+    const prevBtn = container.querySelector('.carousel-prev');
+    const nextBtn = container.querySelector('.carousel-next');
+
+    let index = parseInt(container.dataset.activeIndex || '0', 10);
+    index += direction;
+
+    if (index < 0) index = 0;
+    if (index >= slides.length) index = slides.length - 1;
+
+    container.dataset.activeIndex = index;
+
+    // Slide transition
+    const slidesWrapper = container.querySelector('.carousel-slides');
+    if (slidesWrapper) {
+        slidesWrapper.style.transform = `translateX(-${index * 100}%)`;
+    }
+
+    // Update dots
+    dots.forEach((dot, idx) => {
+        dot.classList.toggle('active', idx === index);
+    });
+
+    // Update arrow buttons visibility
+    if (prevBtn) prevBtn.style.opacity = index === 0 ? '0' : '1';
+    if (nextBtn) nextBtn.style.opacity = index === slides.length - 1 ? '0' : '1';
+}
+
+// Carousel button click delegation
+document.addEventListener('click', (e) => {
+    const prev = e.target.closest('.carousel-prev');
+    if (prev) {
+        const container = prev.closest('.carousel-container');
+        navigateCarousel(container, -1);
+        return;
+    }
+    const next = e.target.closest('.carousel-next');
+    if (next) {
+        const container = next.closest('.carousel-container');
+        navigateCarousel(container, 1);
+        return;
+    }
+});
+
+// Carousel swipe delegation for touchscreens (mobile devices)
+let touchStartX = 0;
+let touchStartY = 0;
+document.addEventListener('touchstart', (e) => {
+    const container = e.target.closest('.carousel-container');
+    if (!container) return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+}, { passive: true });
+
+document.addEventListener('touchend', (e) => {
+    const container = e.target.closest('.carousel-container');
+    if (!container) return;
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+
+    const diffX = touchEndX - touchStartX;
+    const diffY = touchEndY - touchStartY;
+
+    if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY)) {
+        if (diffX > 0) {
+            navigateCarousel(container, -1); // Swipe right (prev)
+        } else {
+            navigateCarousel(container, 1);  // Swipe left (next)
+        }
+    }
+}, { passive: true });
+
+
+// 2. Notion-style Checklist change delegation
+document.addEventListener('change', async (e) => {
+    if (e.target.classList.contains('notion-todo-checkbox')) {
+        const checkbox = e.target;
+        const postId = checkbox.dataset.postId;
+        const index = parseInt(checkbox.dataset.itemIndex, 10);
+        const checked = checkbox.checked;
+        const label = checkbox.closest('.notion-todo-item');
+
+        // Visual feedback immediately
+        if (label) {
+            label.classList.toggle('completed', checked);
+            let dateEl = label.querySelector('.todo-completed-date');
+            if (checked) {
+                const now = new Date();
+                const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                if (!dateEl) {
+                    dateEl = document.createElement('span');
+                    dateEl.className = 'todo-completed-date';
+                    label.appendChild(dateEl);
+                }
+                dateEl.innerHTML = `<i class="fas fa-check"></i> ${dateStr}`;
+            } else if (dateEl) {
+                dateEl.remove();
+            }
+        }
+
+        try {
+            const posts = await getAllPosts();
+            const post = posts.find(p => String(p.id) === String(postId));
+            if (post && post.todoList && post.todoList[index]) {
+                post.todoList[index].completed = checked;
+                post.todoList[index].completedDate = checked ? Date.now() : null;
+
+                // Save status in firebase (publicly allowed write on posts comment/fields path)
+                await updatePost(post);
+            }
+        } catch (err) {
+            console.error('Error updating todo status:', err);
+            // Revert visual state on error
+            checkbox.checked = !checked;
+            if (label) {
+                label.classList.toggle('completed', !checked);
+            }
+            alert('Failed to save task status. Check your internet connection.');
+        }
+    }
 });

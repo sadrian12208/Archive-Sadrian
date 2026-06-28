@@ -320,6 +320,16 @@ categoryTabs.forEach(tab => {
         tab.classList.add('active');
         currentFilter = tab.dataset.category;
 
+        // Auto-select the corresponding post-type in the composer
+        if (currentFilter !== 'all') {
+            const correspondingBtn = document.querySelector(`.type-btn[data-type="${currentFilter}"]`);
+            if (correspondingBtn) {
+                typeBtns.forEach(b => b.classList.remove('active'));
+                correspondingBtn.classList.add('active');
+                correspondingBtn.querySelector('input').checked = true;
+            }
+        }
+
         // Always switch back to feed view when clicking a category tab
         profileViewSection.style.display = 'none';
         feedViewSection.style.display = 'block';
@@ -861,24 +871,22 @@ async function deletePostById(id) {
     }
 }
 
-async function sharePost(id, btnElement) {
+function sharePost(id, btnElement) {
     try {
         const shareTitle = btnElement ? btnElement.dataset.title : 'Archive Sadrian';
         const shareText = btnElement ? btnElement.dataset.text : 'Check out this archive!';
         const shareUrl = window.location.origin + window.location.pathname + '?post=' + id;
 
         if (navigator.share) {
-            try {
-                await navigator.share({
-                    title: shareTitle,
-                    text: shareText,
-                    url: shareUrl
-                });
-            } catch (err) {
+            navigator.share({
+                title: shareTitle,
+                text: shareText,
+                url: shareUrl
+            }).catch((err) => {
                 if (err.name !== 'AbortError') {
                     copyToClipboard(shareTitle, shareText, shareUrl);
                 }
-            }
+            });
         } else {
             copyToClipboard(shareTitle, shareText, shareUrl);
         }
@@ -1961,6 +1969,13 @@ document.addEventListener('touchend', (e) => {
 document.addEventListener('change', async (e) => {
     if (e.target.classList.contains('notion-todo-checkbox')) {
         const checkbox = e.target;
+        if (!isAdmin) {
+            e.preventDefault();
+            checkbox.checked = !checkbox.checked; // revert
+            alert('Only the admin can update tasks.');
+            return;
+        }
+
         const postId = checkbox.dataset.postId;
         const index = parseInt(checkbox.dataset.itemIndex, 10);
         const checked = checkbox.checked;
